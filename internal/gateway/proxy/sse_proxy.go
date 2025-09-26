@@ -136,6 +136,9 @@ func (p *SSEProxy) proxySSE(c *gin.Context) {
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
 	c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
+	
+	// Set the status code from upstream response
+	c.Status(resp.StatusCode)
 
 	// Stream SSE response
 	c.Stream(func(w io.Writer) bool {

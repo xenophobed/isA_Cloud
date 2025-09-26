@@ -101,6 +101,7 @@ security:
       - "Authorization"
       - "Content-Type"
       - "X-Request-ID"
+      - "Cache-Control"
     allow_credentials: true
 
   rate_limit:

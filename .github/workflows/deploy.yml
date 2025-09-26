@@ -1,0 +1,85 @@
+name: Deploy Services
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy (all, gateway, mcp, model, agent, user, blockchain)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - gateway
+        - mcp
+        - model
+        - agent
+        - user
+        - blockchain
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  AWS_REGION: us-east-1
+  ECS_CLUSTER: isa-platform-cluster
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+    - name: Checkout isA_Cloud
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Deploy Services
+      env:
+        GITHUB_SHA: ${{ github.sha }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      run: |
+        chmod +x deployments/scripts/deploy-service.sh
+        SERVICE="${{ github.event.inputs.service || 'all' }}"
+        ENVIRONMENT="${{ github.event.inputs.environment || 'staging' }}"
+        ./deployments/scripts/deploy-service.sh $SERVICE $ENVIRONMENT deploy
+        
+    - name: Notify Slack on Success
+      if: success()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        message: |
+          ✅ Deployment successful!
+          Service: ${{ github.event.inputs.service || 'all' }}
+          Environment: ${{ github.event.inputs.environment || 'staging' }}
+          Commit: ${{ github.sha }}
+          
+    - name: Notify Slack on Failure
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        message: |
+          ❌ Deployment failed!
+          Service: ${{ github.event.inputs.service || 'all' }}
+          Environment: ${{ github.event.inputs.environment || 'staging' }}
+          Commit: ${{ github.sha }}
