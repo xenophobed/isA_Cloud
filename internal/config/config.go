@@ -127,6 +127,40 @@ type JWTConfig struct {
 	Issuer     string        `mapstructure:"issuer"`
 }
 
+// MQTTConfig contains MQTT broker configuration
+type MQTTConfig struct {
+	Enabled      bool               `mapstructure:"enabled"`
+	BrokerURL    string             `mapstructure:"broker_url"`
+	ClientID     string             `mapstructure:"client_id"`
+	Username     string             `mapstructure:"username"`
+	Password     string             `mapstructure:"password"`
+	KeepAlive    time.Duration      `mapstructure:"keep_alive"`
+	PingTimeout  time.Duration      `mapstructure:"ping_timeout"`
+	CleanSession bool               `mapstructure:"clean_session"`
+	AutoReconnect bool               `mapstructure:"auto_reconnect"`
+	QoS          byte               `mapstructure:"qos"`
+	Topics       MQTTTopicsConfig   `mapstructure:"topics"`
+}
+
+// MQTTTopicsConfig contains MQTT topic patterns
+type MQTTTopicsConfig struct {
+	DeviceTelemetry        string `mapstructure:"device_telemetry"`
+	DeviceStatus           string `mapstructure:"device_status"`
+	DeviceCommands         string `mapstructure:"device_commands"`
+	DeviceCommandsResponse string `mapstructure:"device_commands_response"`
+	DeviceAuth             string `mapstructure:"device_auth"`
+	DeviceRegistration     string `mapstructure:"device_registration"`
+	SystemEvents           string `mapstructure:"system_events"`
+}
+
+// DeviceManagementConfig contains device management services configuration
+type DeviceManagementConfig struct {
+	Enabled          bool            `mapstructure:"enabled"`
+	DeviceService    ServiceEndpoint `mapstructure:"device_service"`
+	TelemetryService ServiceEndpoint `mapstructure:"telemetry_service"`
+	OTAService       ServiceEndpoint `mapstructure:"ota_service"`
+}
+
 // Load loads configuration from file and environment variables
 func Load(configFile string) (*Config, error) {
 	// Set defaults
@@ -260,4 +294,42 @@ func setDefaults() {
 	// viper.SetDefault("blockchain.gas_price", "20000000000")
 	// viper.SetDefault("blockchain.confirmations", 1)
 	// viper.SetDefault("blockchain.health_check_interval", "30s")
+
+	// MQTT
+	viper.SetDefault("mqtt.enabled", true)
+	viper.SetDefault("mqtt.broker_url", "tcp://localhost:1883")
+	viper.SetDefault("mqtt.client_id", "isa_cloud_gateway")
+	viper.SetDefault("mqtt.username", "")
+	viper.SetDefault("mqtt.password", "")
+	viper.SetDefault("mqtt.keep_alive", "60s")
+	viper.SetDefault("mqtt.ping_timeout", "10s")
+	viper.SetDefault("mqtt.clean_session", true)
+	viper.SetDefault("mqtt.auto_reconnect", true)
+	viper.SetDefault("mqtt.qos", 1)
+
+	// MQTT Topics
+	viper.SetDefault("mqtt.topics.device_telemetry", "devices/+/telemetry")
+	viper.SetDefault("mqtt.topics.device_status", "devices/+/status")
+	viper.SetDefault("mqtt.topics.device_commands", "devices/+/commands")
+	viper.SetDefault("mqtt.topics.device_commands_response", "devices/+/commands/response")
+	viper.SetDefault("mqtt.topics.device_auth", "devices/+/auth")
+	viper.SetDefault("mqtt.topics.device_registration", "devices/register")
+	viper.SetDefault("mqtt.topics.system_events", "system/events")
+
+	// Device Management
+	viper.SetDefault("device_management.enabled", true)
+	viper.SetDefault("device_management.device_service.host", "localhost")
+	viper.SetDefault("device_management.device_service.http_port", 8220)
+	viper.SetDefault("device_management.device_service.grpc_port", 9220)
+	viper.SetDefault("device_management.device_service.timeout", "30s")
+
+	viper.SetDefault("device_management.telemetry_service.host", "localhost")
+	viper.SetDefault("device_management.telemetry_service.http_port", 8221)
+	viper.SetDefault("device_management.telemetry_service.grpc_port", 9221)
+	viper.SetDefault("device_management.telemetry_service.timeout", "30s")
+
+	viper.SetDefault("device_management.ota_service.host", "localhost")
+	viper.SetDefault("device_management.ota_service.http_port", 8222)
+	viper.SetDefault("device_management.ota_service.grpc_port", 9222)
+	viper.SetDefault("device_management.ota_service.timeout", "60s")
 }

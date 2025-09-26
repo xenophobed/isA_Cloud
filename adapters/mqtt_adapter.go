@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/isa-cloud/isa_cloud/internal/config"
+	"github.com/isa-cloud/isa_cloud/pkg/logger"
 )
 
 // MQTTAdapter handles MQTT protocol adaptation for IoT devices

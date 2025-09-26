@@ -188,7 +188,7 @@ main() {
     fi
     
     # Set AWS account ID
-    export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    export AWS_ACCOUNT_ID=812363383864
     export GITHUB_SHA=${GITHUB_SHA:-$(git rev-parse --short HEAD)}
     
     if [ "$SERVICE" == "all" ]; then

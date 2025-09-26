@@ -17,6 +17,7 @@ import (
 	"github.com/isa-cloud/isa_cloud/internal/gateway/proxy"
 	"github.com/isa-cloud/isa_cloud/internal/gateway/registry"
 	"github.com/isa-cloud/isa_cloud/internal/gateway/blockchain"
+	"github.com/isa-cloud/isa_cloud/internal/gateway/mqtt"
 )
 
 // Gateway represents the main gateway service
@@ -27,6 +28,7 @@ type Gateway struct {
 	dynamicProxy      *proxy.DynamicProxy
 	registry          *registry.ConsulRegistry
 	blockchainGateway *blockchain.Gateway
+	mqttAdapter       *mqtt.Adapter
 }
 
 // New creates a new Gateway instance
@@ -76,6 +78,17 @@ func New(cfg *config.Config, logger *logger.Logger) (*Gateway, error) {
 		}
 	}
 
+	// Initialize MQTT adapter
+	var mqttAdapter *mqtt.Adapter
+	if cfg.MQTT.Enabled && cfg.DeviceManagement.Enabled {
+		mqttAdapter = mqtt.NewAdapter(&cfg.MQTT, &cfg.DeviceManagement, logger)
+		if err := mqttAdapter.Connect(); err != nil {
+			logger.Warn("Failed to connect MQTT adapter", "error", err)
+		} else {
+			logger.Info("MQTT adapter initialized successfully")
+		}
+	}
+
 	return &Gateway{
 		config:            cfg,
 		logger:            logger,
@@ -83,6 +96,7 @@ func New(cfg *config.Config, logger *logger.Logger) (*Gateway, error) {
 		dynamicProxy:      dynamicProxy,
 		registry:          consulRegistry,
 		blockchainGateway: blockchainGateway,
+		mqttAdapter:       mqttAdapter,
 	}, nil
 }
 
@@ -138,6 +152,18 @@ func (g *Gateway) SetupHTTPRoutes() *gin.Engine {
 		blockchainAPI.POST("/transaction", g.sendTransaction)
 		blockchainAPI.GET("/transaction/:hash", g.getTransaction)
 		blockchainAPI.GET("/block/:number", g.getBlock)
+	}
+
+	// MQTT and Device Management routes (if MQTT adapter is available)
+	if g.mqttAdapter != nil {
+		deviceAPI := router.Group("/api/v1/devices")
+		deviceAPI.Use(middleware.UnifiedAuthentication(g.clients.Auth, g.registry, g.logger))
+		
+		// Device management endpoints
+		deviceAPI.GET("/mqtt/status", g.mqttStatus)
+		deviceAPI.GET("/mqtt/stats", g.mqttStats)
+		deviceAPI.POST("/:device_id/commands", g.sendDeviceCommand)
+		deviceAPI.GET("/stats", g.deviceStats)
 	}
 	
 	// Set up dynamic proxy for service routes
@@ -219,6 +245,12 @@ func (g *Gateway) GRPCStreamInterceptor() grpc.StreamServerInterceptor {
 // Shutdown gracefully shuts down the gateway
 func (g *Gateway) Shutdown(ctx context.Context) error {
 	g.logger.Info("Shutting down gateway...")
+	
+	// Disconnect MQTT adapter
+	if g.mqttAdapter != nil {
+		g.mqttAdapter.Disconnect()
+		g.logger.Info("MQTT adapter disconnected")
+	}
 	
 	// Close service clients
 	if err := g.clients.Close(); err != nil {
@@ -374,6 +406,98 @@ func (g *Gateway) servicesHealth(c *gin.Context) {
 	c.JSON(status, gin.H{
 		"healthy":  allHealthy,
 		"services": health,
+		"timestamp": time.Now().UTC(),
+	})
+}
+
+// MQTT status endpoint
+func (g *Gateway) mqttStatus(c *gin.Context) {
+	if g.mqttAdapter == nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "MQTT adapter not available",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"connected": g.mqttAdapter.IsConnected(),
+		"stats":     g.mqttAdapter.GetStats(),
+		"timestamp": time.Now().UTC(),
+	})
+}
+
+// MQTT statistics endpoint
+func (g *Gateway) mqttStats(c *gin.Context) {
+	if g.mqttAdapter == nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "MQTT adapter not available",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, g.mqttAdapter.GetStats())
+}
+
+// Send command to device endpoint
+func (g *Gateway) sendDeviceCommand(c *gin.Context) {
+	if g.mqttAdapter == nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "MQTT adapter not available",
+		})
+		return
+	}
+
+	deviceID := c.Param("device_id")
+	if deviceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "device_id is required",
+		})
+		return
+	}
+
+	var command map[string]interface{}
+	if err := c.ShouldBindJSON(&command); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid JSON payload",
+		})
+		return
+	}
+
+	// Add metadata to command
+	command["timestamp"] = time.Now().UTC().Format(time.RFC3339)
+	command["source"] = "gateway"
+
+	if err := g.mqttAdapter.SendCommandToDevice(deviceID, command); err != nil {
+		g.logger.Error("Failed to send device command", 
+			"device_id", deviceID, 
+			"error", err,
+		)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to send command",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"device_id": deviceID,
+		"command":   command,
+		"timestamp": time.Now().UTC(),
+	})
+}
+
+// Device statistics endpoint
+func (g *Gateway) deviceStats(c *gin.Context) {
+	// This would typically aggregate stats from device management services
+	// For now, return basic info
+	c.JSON(http.StatusOK, gin.H{
+		"mqtt": map[string]interface{}{
+			"enabled":   g.config.MQTT.Enabled,
+			"connected": g.mqttAdapter != nil && g.mqttAdapter.IsConnected(),
+		},
+		"device_management": map[string]interface{}{
+			"enabled": g.config.DeviceManagement.Enabled,
+		},
 		"timestamp": time.Now().UTC(),
 	})
 }
