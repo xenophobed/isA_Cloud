@@ -134,3 +134,41 @@ blockchain:
     default_gas_limit: 21000
     default_gas_price: "20000000000"  # 20 gwei
     max_gas_price: "100000000000"     # 100 gwei
+
+mqtt:
+  enabled: true
+  broker_url: "tcp://localhost:1883"
+  client_id: "isa_cloud_gateway"
+  username: ""
+  password: ""
+  keep_alive: 60
+  ping_timeout: 10
+  clean_session: true
+  auto_reconnect: true
+  qos: 1
+  topics:
+    device_telemetry: "devices/+/telemetry"
+    device_status: "devices/+/status"
+    device_commands: "devices/+/commands"
+    device_commands_response: "devices/+/commands/response"
+    device_auth: "devices/+/auth"
+    device_registration: "devices/register"
+    system_events: "system/events"
+
+device_management:
+  enabled: true
+  device_service:
+    host: "localhost"
+    http_port: 8220  # Device Management Service port
+    grpc_port: 9220
+    timeout: "30s"
+  telemetry_service:
+    host: "localhost"
+    http_port: 8221  # Telemetry Service port
+    grpc_port: 9221
+    timeout: "30s"
+  ota_service:
+    host: "localhost"
+    http_port: 8222  # OTA Service port
+    grpc_port: 9222
+    timeout: "60s"

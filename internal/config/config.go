@@ -10,17 +10,19 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	App         AppConfig         `mapstructure:"app"`
-	Environment string            `mapstructure:"environment"`
-	Debug       bool              `mapstructure:"debug"`
-	Server      ServerConfig      `mapstructure:"server"`
-	Services    ServicesConfig    `mapstructure:"services"`
-	Database    DatabaseConfig    `mapstructure:"database"`
-	Redis       RedisConfig       `mapstructure:"redis"`
-	Logging     LoggingConfig     `mapstructure:"logging"`
-	Monitoring  MonitoringConfig  `mapstructure:"monitoring"`
-	Security    SecurityConfig    `mapstructure:"security"`
-	Blockchain  BlockchainConfig  `mapstructure:"blockchain"`  // Re-enabled with chain-agnostic design
+	App               AppConfig             `mapstructure:"app"`
+	Environment       string                `mapstructure:"environment"`
+	Debug             bool                  `mapstructure:"debug"`
+	Server            ServerConfig          `mapstructure:"server"`
+	Services          ServicesConfig        `mapstructure:"services"`
+	Database          DatabaseConfig        `mapstructure:"database"`
+	Redis             RedisConfig           `mapstructure:"redis"`
+	Logging           LoggingConfig         `mapstructure:"logging"`
+	Monitoring        MonitoringConfig      `mapstructure:"monitoring"`
+	Security          SecurityConfig        `mapstructure:"security"`
+	Blockchain        BlockchainConfig      `mapstructure:"blockchain"`  // Re-enabled with chain-agnostic design
+	MQTT              MQTTConfig            `mapstructure:"mqtt"`
+	DeviceManagement  DeviceManagementConfig `mapstructure:"device_management"`
 }
 
 // AppConfig contains application metadata
