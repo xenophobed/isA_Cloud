@@ -68,7 +68,7 @@ get_service_port() {
         mcp) echo "8081" ;;
         user) echo "8201" ;;
         model) echo "8082" ;;
-        agent) echo "8083" ;;
+        agent) echo "8080" ;;
         blockchain) echo "8545" ;;  # Hardhat node RPC port
         *) echo "" ;;
     esac
@@ -204,7 +204,8 @@ start_service() {
         (cd "$AGENT_DIR" && nohup bash -c "./deployment/scripts/start.sh local" > "$log_file" 2>&1) &
         local pid=$!
     elif [[ "$service" == "blockchain" ]]; then
-        (cd "$CHAIN_DIR" && nohup bash -c "./scripts/start-services.sh" > "$log_file" 2>&1) &
+        # Auto-select option 1 (Hardhat) for non-interactive startup
+        (cd "$CHAIN_DIR" && nohup bash -c "echo '1' | ./scripts/start-services.sh" > "$log_file" 2>&1) &
         local pid=$!
     else
         nohup bash -c "$cmd" > "$log_file" 2>&1 &
@@ -454,7 +455,7 @@ health_check() {
     fi
     
     # Check Gateway
-    if curl -s http://localhost:8080/health > /dev/null; then
+    if curl -s http://localhost:8000/health > /dev/null; then
         echo -e "${GREEN}✓ Gateway is healthy${NC}"
     else
         echo -e "${RED}✗ Gateway is not responding${NC}"
