@@ -2,7 +2,6 @@ package mqtt
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -64,7 +63,9 @@ func (a *Adapter) Connect() error {
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(a.config.BrokerURL)
-	opts.SetClientID(a.config.ClientID)
+	// Add timestamp to make client ID unique
+	clientID := fmt.Sprintf("%s_%d", a.config.ClientID, time.Now().Unix())
+	opts.SetClientID(clientID)
 
 	if a.config.Username != "" {
 		opts.SetUsername(a.config.Username)
